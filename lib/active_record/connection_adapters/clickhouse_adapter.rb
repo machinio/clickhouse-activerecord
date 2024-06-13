@@ -10,6 +10,7 @@ require 'active_record/connection_adapters/clickhouse/oid/date_time'
 require 'active_record/connection_adapters/clickhouse/oid/map'
 require 'active_record/connection_adapters/clickhouse/oid/big_integer'
 require 'active_record/connection_adapters/clickhouse/oid/uuid'
+require 'active_record/connection_adapters/clickhouse/oid/enum'
 require 'active_record/connection_adapters/clickhouse/schema_definitions'
 require 'active_record/connection_adapters/clickhouse/schema_creation'
 require 'active_record/connection_adapters/clickhouse/schema_statements'
@@ -250,6 +251,10 @@ module ActiveRecord
           # register_class_with_limit m, %r(Array), Clickhouse::OID::Array
           m.register_type(%r(Array)) do |sql_type|
             Clickhouse::OID::Array.new(sql_type)
+          end
+
+          m.register_type(%r(Enum)) do |sql_type|
+            Clickhouse::OID::Enum.new(sql_type)
           end
 
           m.register_type(%r(Map)) do |sql_type|
