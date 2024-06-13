@@ -148,6 +148,8 @@ HEADER
     def format_colspec(colspec)
       if simple
         super.gsub(/CAST\('?([^,']*)'?,\s?'.*?'\)/, "\\1")
+      elsif colspec[:value]
+        super.gsub(/value\:\s/, "")
       else
         super
       end
@@ -167,6 +169,11 @@ HEADER
       (column.sql_type =~ /Array?\(/).nil? ? nil : true
     end
 
+    def schema_type(column)
+      return :column if [:enum8, :enum16].include?(column.type)
+      super
+    end
+
     def prepare_column_options(column)
       spec = {}
       spec[:unsigned] = schema_unsigned(column)
@@ -175,6 +182,10 @@ HEADER
       if column.type == :map
         spec[:key_type] = "\"#{column.key_type}\""
         spec[:value_type] = "\"#{column.value_type}\""
+      end
+
+      if [:enum8, :enum16].include?(column.type)
+        spec[:value] = "\"#{column.sql_type}\""
       end
 
       spec.merge(super).compact
