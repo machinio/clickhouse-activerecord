@@ -59,6 +59,8 @@ HEADER
 
         # Copy from original dumper
         columns = @connection.columns(table)
+        nested_data = extract_nested_columns(columns)
+
         begin
           tbl = StringIO.new
 
@@ -102,10 +104,21 @@ HEADER
           if simple || !match
             columns.each do |column|
               raise StandardError, "Unknown type '#{column.sql_type}' for column '#{column.name}'" unless @connection.valid_type?(column.type)
-              next if column.name == pk
+              next if column.name == pk || column.name =~ /\./
               type, colspec = column_spec(column)
               tbl.print "    t.#{type} #{column.name.inspect}"
               tbl.print ", #{format_colspec(colspec)}" if colspec.present?
+              tbl.puts
+            end
+
+            nested_data.each do |nested_name, nested_columns|
+              tbl.print "    t.column #{nested_name.inspect}, \"Nested("
+              nested_columns.each do |column|
+                tbl.print "#{column.name.split(/\./).last} #{column.sql_type.gsub(/\AArray\((.*)\)/, "\\1")}"
+                tbl.print ", " if column != nested_columns.last
+              end
+              tbl.print ")\""
+              tbl.print ", null: false" if !nested_columns.first.null
               tbl.puts
             end
           end
@@ -170,21 +183,20 @@ HEADER
     end
 
     def schema_type(column)
-      return :column if [:enum8, :enum16].include?(column.type)
+      return :column if [:enum8, :enum16].include?(column.type) || column.sql_type =~ /Array/
       super
     end
 
     def prepare_column_options(column)
       spec = {}
       spec[:unsigned] = schema_unsigned(column)
-      spec[:array] = schema_array(column)
 
       if column.type == :map
         spec[:key_type] = "\"#{column.key_type}\""
         spec[:value_type] = "\"#{column.value_type}\""
       end
 
-      if [:enum8, :enum16].include?(column.type)
+      if [:enum8, :enum16].include?(column.type) || column.sql_type =~ /Array/
         spec[:value] = "\"#{column.sql_type}\""
       end
 
@@ -200,6 +212,18 @@ HEADER
       ]
       index_parts << "granularity: #{idx['granularity']}" if idx['granularity']
       index_parts
+    end
+
+    def extract_nested_columns(columns)
+      extracted = {}
+
+      columns.select { |c| c.sql_type =~ /Array/ && c.name =~/\./ }.each do |column|
+        key = column.name.split('.').first
+        extracted[key] ||= []
+        extracted[key] << column
+      end
+
+      extracted
     end
   end
 end
