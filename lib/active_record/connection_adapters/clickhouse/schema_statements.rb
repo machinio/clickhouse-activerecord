@@ -8,6 +8,28 @@ module ActiveRecord
       module SchemaStatements
         DEFAULT_RESPONSE_FORMAT = 'JSONCompactEachRowWithNamesAndTypes'.freeze
 
+        READ_QUERY = ActiveRecord::ConnectionAdapters::AbstractAdapter.build_read_query_regexp(
+          :close, :declare, :fetch, :move, :set, :show
+        ) # :nodoc:
+        private_constant :READ_QUERY
+
+        def initialize(...)
+          super
+
+          @notice_receiver_sql_warnings = []
+        end
+
+        def raw_execute(sql, name, async: false, allow_retry: false, materialize_transactions: true)
+          log(sql, name, async: async) do
+            with_raw_connection(allow_retry: allow_retry, materialize_transactions: materialize_transactions) do |conn|
+              result = do_execute(sql, name, settings: {})
+              verified!
+              handle_warnings(result)
+              result
+            end
+          end
+        end
+
         def execute(sql, name = nil, settings: {})
           do_execute(sql, name, settings: settings)
         end
@@ -49,6 +71,12 @@ module ActiveRecord
               0
             end
           end
+        end
+
+        def write_query?(sql) # :nodoc:
+          !READ_QUERY.match?(sql)
+        rescue ArgumentError # Invalid encoding
+          !READ_QUERY.match?(sql.b)
         end
 
         def tables(name = nil)
@@ -133,6 +161,28 @@ module ActiveRecord
           end
         end
 
+        def reconnect
+          begin
+            @raw_connection&.reset
+          rescue PG::ConnectionBad
+            @raw_connection = nil
+          end
+
+          connect unless @raw_connection
+        end
+
+        def create_savepoint(name = current_savepoint_name)
+          internal_execute("SELECT 1 /* CREATE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+        end
+
+        def exec_rollback_to_savepoint(name = current_savepoint_name)
+          internal_execute("SELECT 1 /* ROLLBACK TO SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+        end
+
+        def release_savepoint(name = current_savepoint_name)
+          internal_execute("SELECT 1 /* RELEASE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+        end
+
         private
 
         # Make HTTP request to ClickHouse server
@@ -192,6 +242,15 @@ module ActiveRecord
           default_value = extract_value_from_default(default)
           default_function = extract_default_function(default_value, default)
           ClickhouseColumn.new(field[0], default_value, type_metadata, field[1].include?('Nullable'), default_function)
+        end
+
+        def handle_warnings(sql)
+          @notice_receiver_sql_warnings.each do |warning|
+            next if warning_ignored?(warning)
+
+            warning.sql = sql
+            ActiveRecord.db_warnings_action.call(warning)
+          end
         end
 
         protected
