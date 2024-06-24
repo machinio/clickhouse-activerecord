@@ -11,6 +11,7 @@ require 'active_record/connection_adapters/clickhouse/oid/map'
 require 'active_record/connection_adapters/clickhouse/oid/big_integer'
 require 'active_record/connection_adapters/clickhouse/oid/uuid'
 require 'active_record/connection_adapters/clickhouse/oid/enum'
+require 'active_record/connection_adapters/clickhouse/quoting'
 require 'active_record/connection_adapters/clickhouse/schema_definitions'
 require 'active_record/connection_adapters/clickhouse/schema_creation'
 require 'active_record/connection_adapters/clickhouse/schema_statements'
@@ -153,6 +154,7 @@ module ActiveRecord
         map: { name: 'Map' }
       }.freeze
 
+      include Clickhouse::Quoting
       include Clickhouse::SchemaStatements
 
       TYPE_MAP = Type::TypeMap.new.tap { |m| initialize_type_map(m) }
