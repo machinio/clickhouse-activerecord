@@ -5,11 +5,13 @@ rescue LoadError => e
 end
 
 require "active_record/connection_adapters/abstract/schema_creation"
+require 'active_record/connection_adapters/clickhouse/quoting'
 
 module ActiveRecord
   module ConnectionAdapters
     module Clickhouse
       class SchemaCreation < ConnectionAdapters::SchemaCreation# :nodoc:
+        include Clickhouse::Quoting
 
         def visit_AddColumnDefinition(o)
           sql = +"ADD COLUMN #{accept(o.column)}"
@@ -87,7 +89,8 @@ module ActiveRecord
         def visit_TableDefinition(o)
           create_sql = +"CREATE#{table_modifier_in_create(o)} #{o.view ? "VIEW" : "TABLE"} "
           create_sql << "IF NOT EXISTS " if o.if_not_exists
-          create_sql << "#{quote_table_name(o.name)} "
+          create_sql << quote_table_name(o.name)
+          create_sql << "#{cluster_sql_suffix} "
           add_as_clause!(create_sql, o) if o.as && !o.view
           add_to_clause!(create_sql, o) if o.materialized
 
@@ -133,7 +136,7 @@ module ActiveRecord
         end
 
         def visit_IndexDefinition(o, create = false)
-          sql = create ? ["ALTER TABLE #{quote_table_name(o.table)} ADD"] : []
+          sql = create ? ["ALTER TABLE #{quote_table_name(o.table)}#{cluster_sql_suffix} ADD"] : []
           sql << "INDEX"
           sql << "IF NOT EXISTS" if o.if_not_exists
           sql << "IF EXISTS" if o.if_exists
@@ -151,6 +154,22 @@ module ActiveRecord
 
         def current_database
           ActiveRecord::Base.connection_db_config.database
+        end
+
+        private
+
+        def cluster
+          ActiveRecord::Base.connection_db_config.configuration_hash[:cluster_name]
+        end
+
+        def cluster_sql_suffix
+          if cluster
+            normalized_cluster_name = cluster.start_with?('{') ? "'#{cluster}'" : cluster
+
+            " ON CLUSTER #{normalized_cluster_name}"
+          else
+            ""
+          end
         end
       end
     end

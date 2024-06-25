@@ -42,6 +42,7 @@ ActiveRecord::Base.configurations = HashWithIndifferentAccess.new(
     username: nil,
     password: nil,
     use_metadata_table: false,
+    debug: false,
     cluster_name: ENV['CLICKHOUSE_CLUSTER'],
   }
 )
@@ -56,16 +57,7 @@ def schema(model)
 end
 
 def clear_db
-  cluster = ActiveRecord::Base.connection_db_config.configuration_hash[:cluster_name]
-  pattern = if cluster
-              normalized_cluster_name = cluster.start_with?('{') ? "'#{cluster}'" : cluster
-
-              "DROP TABLE %s ON CLUSTER #{normalized_cluster_name} SYNC"
-            else
-              'DROP TABLE %s'
-            end
-
-  ActiveRecord::Base.connection.tables.each { |table| ActiveRecord::Base.connection.execute(pattern % table) }
+  ActiveRecord::Base.connection.tables.each { |table| ActiveRecord::Base.connection.drop_table(table, sync: true) }
 rescue ActiveRecord::NoDatabaseError
   # Ignored
 end

@@ -315,12 +315,12 @@ module ActiveRecord
       # @param [String] table
       # @return [String]
       def show_create_table(table)
-        do_system_execute("SHOW CREATE TABLE `#{table}`")['data'].try(:first).try(:first).gsub(/[\n\s]+/m, ' ')
+        do_system_execute("SHOW CREATE TABLE #{quote_table_name(table)}")['data'].try(:first).try(:first).gsub(/[\n\s]+/m, ' ')
       end
 
       # Create a new ClickHouse database.
       def create_database(name)
-        sql = apply_cluster "CREATE DATABASE #{quote_table_name(name)}"
+        sql = "CREATE DATABASE #{quote_table_name(name)}#{cluster_sql_suffix}"
         log_with_debug(sql, adapter_name) do
           res = @connection.post("/?#{@connection_config.except(:database).to_param}", sql)
           process_response(res, DEFAULT_RESPONSE_FORMAT)
@@ -330,7 +330,7 @@ module ActiveRecord
       def create_view(table_name, **options)
         options.merge!(view: true)
         options = apply_replica(table_name, options)
-        td = create_table_definition(apply_cluster(table_name), **options)
+        td = create_table_definition(table_name, **options)
         yield td if block_given?
 
         if options[:force]
@@ -342,7 +342,7 @@ module ActiveRecord
 
       def create_table(table_name, **options, &block)
         options = apply_replica(table_name, options)
-        td = create_table_definition(apply_cluster(table_name), **options)
+        td = create_table_definition(table_name, **options)
         block.call td if block_given?
         td.column(:id, options[:id], null: false) if options[:id].present? && td[:id].blank? && options[:as].blank?
 
@@ -364,13 +364,13 @@ module ActiveRecord
       end
 
       def create_function(name, body)
-        fd = "CREATE FUNCTION #{apply_cluster(quote_table_name(name))} AS #{body}"
+        fd = "CREATE FUNCTION #{quote_table_name(name)}#{cluster_sql_suffix} AS #{body}"
         do_execute(fd, format: nil)
       end
 
       # Drops a ClickHouse database.
       def drop_database(name) #:nodoc:
-        sql = apply_cluster "DROP DATABASE IF EXISTS #{quote_table_name(name)}"
+        sql = "DROP DATABASE IF EXISTS #{quote_table_name(name)}#{cluster_sql_suffix}"
         log_with_debug(sql, adapter_name) do
           res = @connection.post("/?#{@connection_config.except(:database).to_param}", sql)
           process_response(res, DEFAULT_RESPONSE_FORMAT)
@@ -384,14 +384,13 @@ module ActiveRecord
       end
 
       def rename_table(table_name, new_name)
-        do_execute apply_cluster "RENAME TABLE #{quote_table_name(table_name)} TO #{quote_table_name(new_name)}"
+        do_execute "RENAME TABLE #{quote_table_name(table_name)} TO #{quote_table_name(new_name)}#{cluster_sql_suffix}"
       end
 
       def drop_table(table_name, options = {}) # :nodoc:
         query = "DROP TABLE"
         query = "#{query} IF EXISTS " if options[:if_exists]
-        query = "#{query} #{quote_table_name(table_name)}"
-        query = apply_cluster(query)
+        query = "#{query} #{quote_table_name(table_name)}#{cluster_sql_suffix}"
         query = "#{query} SYNC" if options[:sync]
 
         do_execute(query)
@@ -405,8 +404,7 @@ module ActiveRecord
       def drop_function(name, options = {})
         query = "DROP FUNCTION"
         query = "#{query} IF EXISTS " if options[:if_exists]
-        query = "#{query} #{quote_table_name(name)}"
-        query = apply_cluster(query)
+        query = "#{query} #{quote_table_name(name)}#{cluster_sql_suffix}"
         query = "#{query} SYNC" if options[:sync]
 
         do_execute(query, format: nil)
@@ -444,19 +442,19 @@ module ActiveRecord
       # Adds index description to tables metadata
       # @link https://clickhouse.com/docs/en/sql-reference/statements/alter/skipping-index
       def add_index(table_name, expression, **options)
-        index = add_index_options(apply_cluster(table_name), expression, **options)
+        index = add_index_options(table_name, expression, **options)
         execute schema_creation.accept(CreateIndexDefinition.new(index))
       end
 
       # Removes index description from tables metadata and deletes index files from disk
       def remove_index(table_name, name)
-        query = apply_cluster("ALTER TABLE #{quote_table_name(table_name)}")
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"
         execute "#{query} DROP INDEX #{quote_column_name(name)}"
       end
 
       # Rebuilds the secondary index name for the specified partition_name
       def rebuild_index(table_name, name, if_exists: false, partition: nil)
-        query = [apply_cluster("ALTER TABLE #{quote_table_name(table_name)}")]
+        query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"]
         query << 'MATERIALIZE INDEX'
         query << 'IF EXISTS' if if_exists
         query << quote_column_name(name)
@@ -466,7 +464,7 @@ module ActiveRecord
 
       # Deletes the secondary index files from disk without removing description
       def clear_index(table_name, name, if_exists: false, partition: nil)
-        query = [apply_cluster("ALTER TABLE #{quote_table_name(table_name)}")]
+        query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"]
         query << 'CLEAR INDEX'
         query << 'IF EXISTS' if if_exists
         query << quote_column_name(name)
@@ -504,13 +502,13 @@ module ActiveRecord
         res['engine'] == 'Atomic' if res
       end
 
-      def apply_cluster(sql)
+      def cluster_sql_suffix
         if cluster
           normalized_cluster_name = cluster.start_with?('{') ? "'#{cluster}'" : cluster
 
-          "#{sql} ON CLUSTER #{normalized_cluster_name}"
+          " ON CLUSTER #{normalized_cluster_name}"
         else
-          sql
+          ""
         end
       end
 

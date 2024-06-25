@@ -6,7 +6,7 @@ module ActiveRecord
 
         # Quotes column names for use in SQL queries.
         def quote_column_name(name) # :nodoc:
-          QUOTED_COLUMN_NAMES[name] ||= (name.to_s.match?('.') ? "`#{name}`" : name.to_s)
+          QUOTED_COLUMN_NAMES[name] ||= name.to_s['.'] ? "`#{name}`" : name.to_s
         end
       end
     end

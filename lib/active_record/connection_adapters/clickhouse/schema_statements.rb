@@ -246,7 +246,7 @@ module ActiveRecord
         protected
 
         def table_structure(table_name)
-          result = do_system_execute("DESCRIBE TABLE `#{table_name}`", table_name)
+          result = do_system_execute("DESCRIBE TABLE #{quote_table_name(table_name)}", table_name)
           data = result['data']
 
           return data unless data.empty?
