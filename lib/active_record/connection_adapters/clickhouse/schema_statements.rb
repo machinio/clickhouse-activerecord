@@ -161,26 +161,16 @@ module ActiveRecord
           end
         end
 
-        def reconnect
-          begin
-            @raw_connection&.reset
-          rescue PG::ConnectionBad
-            @raw_connection = nil
-          end
-
-          connect unless @raw_connection
-        end
-
         def create_savepoint(name = current_savepoint_name)
-          internal_execute("SELECT 1 /* CREATE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+          # internal_execute("SELECT 1 /* CREATE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
         end
 
         def exec_rollback_to_savepoint(name = current_savepoint_name)
-          internal_execute("SELECT 1 /* ROLLBACK TO SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+          # internal_execute("SELECT 1 /* ROLLBACK TO SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
         end
 
         def release_savepoint(name = current_savepoint_name)
-          internal_execute("SELECT 1 /* RELEASE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
+          # internal_execute("SELECT 1 /* RELEASE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
         end
 
         private

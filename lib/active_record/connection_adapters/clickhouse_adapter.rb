@@ -527,6 +527,22 @@ module ActiveRecord
         sql
       end
 
+      def supports_savepoints?
+        false
+      end
+
+      def supports_restart_db_transaction?
+        false
+      end
+
+      def supports_transaction_isolation?
+        false
+      end
+
+      def supports_ddl_transactions?
+        false
+      end
+
       protected
 
       def last_inserted_id(result)
@@ -552,6 +568,11 @@ module ActiveRecord
         @connection.keep_alive_timeout = @connection_parameters[:keep_alive_timeout] || 10
 
         @connection
+      end
+
+      def reconnect
+        @connection = nil
+        connect
       end
 
       def apply_replica(table, options)
