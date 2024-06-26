@@ -28,6 +28,14 @@ module CoreExtensions
         end
       end
 
+      def create_version(version)
+        return super unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
+
+        im = ::Arel::InsertManager.new(arel_table)
+        im.insert(arel_table[primary_key] => version, arel_table['active'] => 1)
+        connection.insert(im, "#{self.class} Create Migrate Version", primary_key, version)
+      end
+
       def delete_version(version)
         return super unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
 
@@ -36,10 +44,16 @@ module CoreExtensions
         connection.insert(im, "#{self.class} Create Rollback Version", primary_key, version)
       end
 
-      def all_versions
+      def versions
         return super unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
 
-        final.where(active: 1).order(:version).pluck(:version)
+        sm = ::Arel::SelectManager.new(arel_table)
+        sm.final! if connection.table_options(table_name)[:options] =~ /^ReplacingMergeTree/
+        sm.project(arel_table[primary_key])
+        sm.where(arel_table['active'].eq(1))
+        sm.order(arel_table[primary_key].asc)
+
+        connection.select_values(sm, "#{self.class} Load")
       end
     end
   end
