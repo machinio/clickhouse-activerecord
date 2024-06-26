@@ -67,7 +67,7 @@ module ActiveRecord
           # If you do not specify a database explicitly, ClickHouse will use the "default" database.
           return unless subquery
 
-          match = subquery.match(/(?<=from)[^.\w]+(?<database>\w+(?=\.))?(?<table_name>[.\w]+)/i)
+          match = subquery.match(/(?<=from)[^.\w(]+(?<database>\w+(?=\.))?(?<table_name>[.\w]+)/i)
           return unless match
           return if match[:database]
 
