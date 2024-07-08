@@ -33,7 +33,8 @@ module ActiveRecord
           def serialize(value)
             return '{}' if value.nil?
 
-            "{#{value.map { |k, v| "'#{k}': '#{v}'" }.join(', ')}}"
+            res = value.map { |k, v| "#{quote(k, key_type)}: #{quote(v, value_type)}" }.join(', ')
+            "{#{res}}"
           end
 
           private
@@ -48,8 +49,27 @@ module ActiveRecord
               :datetime
             when /Date/
               :date
+            when /Array\(.*\)/
+              type
             else
               :string
+            end
+          end
+
+          def quote(value, type)
+            case cast_type(type)
+            when :string
+              "'#{value}'"
+            when :integer
+              value
+            when :datetime, :date
+              "'#{value.iso8601}'"
+            when /Array\(.*\)/
+              byebug
+              sub_type = type.match(/Array\((.+)\)/).captures.first
+              "[#{value.map { |v| quote(v, sub_type) }.join(', ')}]"
+            else
+              value
             end
           end
         end

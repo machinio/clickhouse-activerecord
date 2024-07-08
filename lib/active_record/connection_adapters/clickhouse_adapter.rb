@@ -114,6 +114,8 @@ module ActiveRecord
           :datetime
         when /Date/
           :date
+        when /Array/
+          type
         else
           :string
         end
@@ -274,6 +276,8 @@ module ActiveRecord
         case value
         when Array
           '[' + value.map { |v| quote(v) }.join(', ') + ']'
+        when Hash
+          '{' + value.map { |k, v| "#{quote(k)}: #{quote(v)}" }.join(', ') + '}'
         else
           super
         end
