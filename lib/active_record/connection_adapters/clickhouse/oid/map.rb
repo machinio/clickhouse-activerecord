@@ -65,7 +65,6 @@ module ActiveRecord
             when :datetime, :date
               "'#{value.iso8601}'"
             when /Array\(.*\)/
-              byebug
               sub_type = type.match(/Array\((.+)\)/).captures.first
               "[#{value.map { |v| quote(v, sub_type) }.join(', ')}]"
             else
