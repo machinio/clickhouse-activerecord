@@ -101,6 +101,12 @@ module ActiveRecord
 
           args.each { |name| column(name, :"Map(#{key_type}, #{value_type})", **options.except(:limit, :key_type, :value_type)) }
         end
+
+        private
+
+        def valid_column_definition_options
+          super + [:array, :low_cardinality, :fixed_string, :value, :type]
+        end
       end
 
       class IndexDefinition
