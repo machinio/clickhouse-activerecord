@@ -181,6 +181,7 @@ module ActiveRecord
         # @param [Hash] settings
         # @return [Net::HTTPResponse]
         def request(sql, format = nil, settings = {})
+          sql = sql.chomp(';')
           formatted_sql = apply_format(sql, format)
           request_params = @connection_config || {}
           @connection.post("/?#{request_params.merge(settings).to_param}", formatted_sql, 'User-Agent' => "Clickhouse ActiveRecord #{ClickhouseActiverecord::VERSION}")
