@@ -424,6 +424,44 @@ module ActiveRecord
         execute("ALTER TABLE #{quote_table_name(table_name)} #{remove_column_for_alter(table_name, column_name, type, **options)}", nil, settings: {wait_end_of_query: 1, send_progress_in_http_headers: 1})
       end
 
+      # ALTER TABLE [db.]name [ON CLUSTER cluster] ADD PROJECTION [IF NOT EXISTS] name ( SELECT <COLUMN LIST EXPR> [GROUP BY] [ORDER BY] )
+      def add_projection(table_name, projection_name, body, options = {})
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} ADD PROJECTION"
+        query = "#{query} IF NOT EXISTS" if options[:if_not_exists]
+        query = "#{query} #{projection_name} ( #{body} )"
+
+        do_execute(query, format: nil)
+      end
+
+      # ALTER TABLE [db.]name [ON CLUSTER cluster] DROP PROJECTION [IF EXISTS] name
+      def drop_projection(table_name, projection_name, options = {})
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} DROP PROJECTION"
+        query = "#{query} IF EXISTS" if options[:if_exists]
+        query = "#{query} #{projection_name}"
+
+        do_execute(query, format: nil)
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] MATERIALIZE PROJECTION [IF EXISTS] name [IN PARTITION partition_name]
+      def materialize_projection(table_name, projection_name, options = {})
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} MATERIALIZE PROJECTION"
+        query = "#{query} IF EXISTS" if options[:if_exists]
+        query = "#{query} #{projection_name}"
+        query = "#{query} IN PARTITION #{quote_column_name(options[:partition])}" if options[:partition]
+
+        do_execute(query, format: nil)
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] CLEAR PROJECTION [IF EXISTS] name [IN PARTITION partition_name]
+      def clear_projection(table_name, projection_name, options = {})
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} CLEAR PROJECTION"
+        query = "#{query} IF EXISTS" if options[:if_exists]
+        query = "#{query} #{projection_name}"
+        query = "#{query} IN PARTITION #{quote_column_name(options[:partition])}" if options[:partition]
+
+        do_execute(query, format: nil)
+      end
+
       def change_column(table_name, column_name, type, **options)
         result = do_execute("ALTER TABLE #{quote_table_name(table_name)} #{change_column_for_alter(table_name, column_name, type, **options)}", nil, settings: {wait_end_of_query: 1, send_progress_in_http_headers: 1})
         raise "Error parse json response: #{result}" if result.presence && !result.is_a?(Hash)
