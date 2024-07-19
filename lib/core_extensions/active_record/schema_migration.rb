@@ -48,10 +48,10 @@ module CoreExtensions
         return super unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
 
         sm = ::Arel::SelectManager.new(arel_table)
-        sm.final! if connection.table_options(table_name)[:options] =~ /^ReplacingMergeTree/
+        sm.final!
         sm.project(arel_table[primary_key])
-        sm.where(arel_table['active'].eq(1))
         sm.order(arel_table[primary_key].asc)
+        sm.where([arel_table['active'].eq(1)])
 
         connection.select_values(sm, "#{self.class} Load")
       end
