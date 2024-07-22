@@ -188,6 +188,10 @@ HEADER
       super
     end
 
+    def schema_low_cardinality(column)
+      (column.sql_type =~ /LowCardinality?\(/).nil? ? nil : true
+    end
+
     def prepare_column_options(column)
       spec = {}
       spec[:unsigned] = schema_unsigned(column)
@@ -202,6 +206,8 @@ HEADER
         spec[:value] = "\"#{column.sql_type}\""
       end
 
+      spec[:array] = schema_array(column)
+      spec[:low_cardinality] = schema_low_cardinality(column)
       spec.merge(super).compact
     end
 
