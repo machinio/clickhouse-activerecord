@@ -319,7 +319,7 @@ module ActiveRecord
       # @param [String] table
       # @return [String]
       def show_create_table(table)
-        do_system_execute("SHOW CREATE TABLE #{quote_table_name(table)}")['data'].try(:first).try(:first).gsub(/[\n\s]+/m, ' ')
+        do_system_execute("SHOW CREATE TABLE #{quote_table_name(table)}")['data'].try(:first).try(:first).gsub(/[\n\s]+/m, ' ').gsub("#{@config[:database]}.", "")
       end
 
       # Create a new ClickHouse database.
