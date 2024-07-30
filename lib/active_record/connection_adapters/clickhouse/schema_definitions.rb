@@ -84,14 +84,15 @@ module ActiveRecord
             raise ArgumentError, "Column #{args.first}: option 'value' must be Hash, got: #{options[:value].class}"
           end
 
-          options[:value] = options[:value].each_with_object([]) { |(k, v), arr| arr.push("'#{k}' = #{v}") }.join(', ')
-
           if options[:limit]
             kind = :enum8  if options[:limit] == 1
             kind = :enum16 if options[:limit] == 2
           end
 
-          args.each { |name| column(name, kind, **options.except(:limit)) }
+          sql_value = options[:value].each_with_object([]) { |(k, v), arr| arr.push("'#{k}' = #{v}") }.join(', ')
+          sql_kind = "#{kind.to_s.capitalize}(#{sql_value})"
+
+          args.each { |name| column(name, sql_kind, **options.except(:limit, :value)) }
         end
 
         def map(*args, **options)
