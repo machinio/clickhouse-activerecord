@@ -45,6 +45,8 @@ module ActiveRecord
           ActiveRecord::Result.new(result['meta'].map { |m| m['name'] }, result['data'], result['meta'].map { |m| [m['name'], type_map.lookup(m['type'])] }.to_h)
         rescue ActiveRecord::ActiveRecordError => e
           raise e
+        rescue Net::ReadTimeout, Net::WriteTimeout, Net::OpenTimeout => e
+          raise ActiveRecord::ConnectionFailed, "Response: #{e.message}"
         rescue StandardError => e
           raise ActiveRecord::ActiveRecordError, "Response: #{e.message}"
         end
