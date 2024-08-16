@@ -175,6 +175,13 @@ module ActiveRecord
           # internal_execute("SELECT 1 /* RELEASE SAVEPOINT '#{name}' is not supported */", "TRANSACTION")
         end
 
+        def views(name = nil)
+          result = do_system_execute("SHOW TABLES WHERE engine = 'View'", name)
+
+          return [] if result.nil?
+          result['data'].flatten
+        end
+
         private
 
         # Make HTTP request to ClickHouse server
