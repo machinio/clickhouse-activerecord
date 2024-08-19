@@ -12,7 +12,7 @@ module ActiveRecord
           end
 
           def quote_table_name(name)
-            name
+            name.to_s
           end
         end
       end
