@@ -102,6 +102,12 @@ module ActiveRecord
           args.each { |name| column(name, :"Map(#{key_type}, #{value_type})", **options.except(:limit, :key_type, :value_type)) }
         end
 
+        def point(*args, **options)
+          kind = :point
+
+          args.each { |name| column(name, kind, **options) }
+        end
+
         private
 
         def valid_column_definition_options

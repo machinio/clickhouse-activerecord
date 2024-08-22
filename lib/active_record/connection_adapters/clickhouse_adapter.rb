@@ -12,6 +12,7 @@ require 'active_record/connection_adapters/clickhouse/oid/big_integer'
 require 'active_record/connection_adapters/clickhouse/oid/map'
 require 'active_record/connection_adapters/clickhouse/oid/uuid'
 require 'active_record/connection_adapters/clickhouse/oid/enum'
+require 'active_record/connection_adapters/clickhouse/oid/point'
 require 'active_record/connection_adapters/clickhouse/quoting'
 require 'active_record/connection_adapters/clickhouse/schema_definitions'
 require 'active_record/connection_adapters/clickhouse/schema_creation'
@@ -122,6 +123,7 @@ module ActiveRecord
         integer: { name: 'UInt32' },
         big_integer: { name: 'UInt64' },
         float: { name: 'Float32' },
+        float64: { name: 'Float64' },
         decimal: { name: 'Decimal' },
         datetime: { name: 'DateTime' },
         datetime64: { name: 'DateTime64' },
@@ -146,7 +148,8 @@ module ActiveRecord
         # uint128: { name: 'UInt128' }, not yet implemented in clickhouse
         uint256: { name: 'UInt256' },
 
-        map: { name: 'Map' }
+        map: { name: 'Map' },
+        point: { name: 'Point' }
       }.freeze
 
       include Clickhouse::Quoting
@@ -261,6 +264,7 @@ module ActiveRecord
 
           m.register_type %r(bool)i, ActiveModel::Type::Boolean.new
           m.register_type %r{uuid}i, Clickhouse::OID::Uuid.new
+          m.register_type %r(point)i, Clickhouse::OID::Point.new
           # register_class_with_limit m, %r(Array), Clickhouse::OID::Array
           m.register_type(%r(Array)) do |sql_type|
             Clickhouse::OID::Array.new(sql_type)

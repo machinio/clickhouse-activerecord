@@ -201,6 +201,16 @@ RSpec.describe 'Model', :migrations do
       end
     end
 
+    describe 'point column type' do
+      let!(:record1) do
+        Model.create!(coordinates: [1.0, 2.0])
+      end
+
+      it 'keeps precision' do
+        expect(record1.coordinates.to_h).to eq({ x: 1.0, y: 2.0 })
+      end
+    end
+
     describe '#settings' do
       it 'works' do
         sql = Model.settings(optimize_read_in_order: 1, cast_keep_nullable: 1).to_sql

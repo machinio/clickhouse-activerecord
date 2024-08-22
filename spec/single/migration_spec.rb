@@ -203,6 +203,19 @@ RSpec.describe 'Migration', :migrations do
               expect(current_schema['enum_nullable'].sql_type).to eq("Nullable(Enum8('key1' = 1, 'key2' = 2))")
             end
           end
+
+          context 'point' do
+            let(:directory) { 'dsl_table_with_point_creation' }
+            it 'creates a table with point columns' do
+              subject
+
+              current_schema = schema(model)
+
+              expect(current_schema.keys.count).to eq(1)
+              expect(current_schema).to have_key('point')
+              expect(current_schema['point'].sql_type).to eq("Point")
+            end
+          end
         end
 
         context 'no database' do
