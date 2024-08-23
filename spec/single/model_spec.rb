@@ -8,6 +8,7 @@ RSpec.describe 'Model', :migrations do
   end
   class Model < ActiveRecord::Base
     self.table_name = 'sample'
+    self.primary_key = nil
     has_many :joins, class_name: 'ModelJoin', primary_key: 'event_name'
   end
   class ModelPk < ActiveRecord::Base
@@ -282,6 +283,7 @@ RSpec.describe 'Model', :migrations do
     let!(:model) do
       Class.new(ActiveRecord::Base) do
         self.table_name = 'actions'
+        self.primary_key = nil
       end
     end
 
@@ -338,6 +340,7 @@ RSpec.describe 'Model', :migrations do
     let!(:model) do
       Class.new(ActiveRecord::Base) do
         self.table_name = 'verbs'
+        self.primary_key = nil
       end
     end
 
