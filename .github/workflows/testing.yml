@@ -26,13 +26,15 @@ jobs:
             rails: 7.1.4
           - ruby: 3.2
             rails: 7.2.0
-        clickhouse: ['24.7']
+          - ruby: 3.2
+            rails: 8.0.1
+        clickhouse: ['24.9']
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Start ClickHouse ${{ matrix.clickhouse }}
-        uses: isbang/compose-action@v1.5.1
+        uses: hoverkraft-tech/compose-action@v2.1.0
         env:
           CLICKHOUSE_VERSION: ${{ matrix.clickhouse }}
         with:
@@ -69,13 +71,15 @@ jobs:
             rails: 7.1.4
           - ruby: 3.2
             rails: 7.2.0
-        clickhouse: ['24.7']
+          - ruby: 3.2
+            rails: 8.0.1
+        clickhouse: ['24.9']
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Start ClickHouse Cluster ${{ matrix.clickhouse }}
-        uses: isbang/compose-action@v1.5.1
+        uses: hoverkraft-tech/compose-action@v2.1.0
         env:
           CLICKHOUSE_VERSION: ${{ matrix.clickhouse }}
         with:

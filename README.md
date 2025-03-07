@@ -18,7 +18,7 @@ And then execute:
 Or install it yourself as:
 
     $ gem install clickhouse-activerecord
-    
+
 ## Available database connection parameters
 ```yml
 default: &default
@@ -31,7 +31,7 @@ default: &default
   ssl: true # optional for using ssl connection
   debug: true # use for showing in to log technical information
   migrations_paths: db/clickhouse # optional, default: db/migrate_clickhouse
-  cluster_name: 'cluster_name' # optional for creating tables in cluster 
+  cluster_name: 'cluster_name' # optional for creating tables in cluster
   replica_name: '{replica}' # replica macros name, optional for creating replicated tables
 ```
 
@@ -82,7 +82,7 @@ Add your `database.yml` connection information for you environment:
 development:
   primary:
     ...
-    
+
   clickhouse:
     adapter: clickhouse
     database: database
@@ -99,7 +99,7 @@ end
 ### Rake tasks
 
 Create / drop / purge / reset database:
- 
+
     $ rake db:create
     $ rake db:drop
     $ rake db:purge
@@ -111,7 +111,7 @@ Or with multiple databases:
     $ rake db:drop:clickhouse
     $ rake db:purge:clickhouse
     $ rake db:reset:clickhouse
-    
+
 Migration:
 
     $ rails g clickhouse_migration MIGRATION_NAME COLUMNS
@@ -125,7 +125,7 @@ If you using multiple databases, for example: PostgreSQL, Clickhouse.
 Schema dump to `db/clickhouse_schema.rb` file:
 
     $ rake db:schema:dump:clickhouse
-    
+
 Schema load from `db/clickhouse_schema.rb` file:
 
     $ rake db:schema:load:clickhouse
@@ -135,20 +135,20 @@ For export schema to PostgreSQL, you need use:
     $ rake clickhouse:schema:dump -- --simple
 
 Schema will be dump to `db/clickhouse_schema_simple.rb`. If default file exists, it will be auto update after migration.
-    
+
 Structure dump to `db/clickhouse_structure.sql` file:
 
     $ rake clickhouse:structure:dump
-    
+
 Structure load from `db/clickhouse_structure.sql` file:
 
     $ rake clickhouse:structure:load
 
 ### Dump / Load for only Clickhouse database using
 
-    $ rake db:schema:dump  
-    $ rake db:schema:load  
-    $ rake db:structure:dump  
+    $ rake db:schema:dump
+    $ rake db:schema:load
+    $ rake db:structure:dump
     $ rake db:structure:load
 
 ### RSpec
@@ -158,7 +158,7 @@ For auto truncate tables before each test add to `spec/rails_helper.rb` file:
 ```
 require 'clickhouse-activerecord/rspec'
 ```
-    
+
 ### Insert and select data
 
 ```ruby
@@ -169,7 +169,7 @@ Action.where(url: 'http://example.com', date: Date.current).where.not(name: nil)
 Action.create(url: 'http://example.com', date: Date.yesterday)
 # Clickhouse Action Load (10.8ms)  INSERT INTO actions (url, date) VALUES ('http://example.com', '2017-11-28')
 #=> true
- 
+
 ActionView.maximum(:date)
 # Clickhouse (10.3ms)  SELECT maxMerge(actions.date) FROM actions
 #=> 'Wed, 29 Nov 2017'
@@ -184,7 +184,11 @@ Action.settings(optimize_read_in_order: 1).where(date: Date.current).limit(10)
 
 User.joins(:actions).using(:group_id)
 # Clickhouse User Load (10.3ms)  SELECT users.* FROM users INNER JOIN actions USING group_id
-#=> #<ActiveRecord::Relation [#<Action *** >]>
+#=> #<ActiveRecord::Relation [#<User *** >]>
+
+User.window('x', order: 'date', partition: 'name', rows: 'UNBOUNDED PRECEDING').select('sum(value) OVER x')
+# SELECT sum(value) OVER x FROM users WINDOW x AS (PARTITION BY name ORDER BY date ROWS UNBOUNDED PRECEDING)
+#=> #<ActiveRecord::Relation [#<User *** >]>
 ```
 
 
@@ -195,7 +199,7 @@ false`. The default integer is `UInt32`
 
 | Type (bit size) |                    Range                     | :limit (byte size) |
 |:----------------|:--------------------------------------------:|-------------------:|
-| Int8            |                 -128 to 127                  |                  1 | 
+| Int8            |                 -128 to 127                  |                  1 |
 | Int16           |               -32768 to 32767                |                  2 |
 | Int32           |         -2147483648 to 2,147,483,647         |                3,4 |
 | Int64           | -9223372036854775808 to 9223372036854775807] |            5,6,7,8 |
@@ -221,7 +225,7 @@ class CreateDataItems < ActiveRecord::Migration[7.1]
       t.integer "sign", limit: 1, unsigned: false, default: -> { "CAST(1, 'Int8')" }, null: false
       t.integer "version", limit: 8, default: -> { "CAST(toUnixTimestamp(now()), 'UInt64')" }, null: false
     end
-    
+
     create_table "with_index", id: false, options: 'MergeTree PARTITION BY toYYYYMM(date) ORDER BY (date)' do |t|
       t.integer :int1, null: false
       t.integer :int2, null: false
@@ -229,9 +233,9 @@ class CreateDataItems < ActiveRecord::Migration[7.1]
 
       t.index '(int1 * int2, date)', name: 'idx', type: 'minmax', granularity: 3
     end
-    
+
     remove_index :some, 'idx'
-    
+
     add_index :some, 'int1 * int2', name: 'idx2', type: 'set(10)', granularity: 4
   end
 end
