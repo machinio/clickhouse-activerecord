@@ -298,6 +298,14 @@ Testing github actions:
 act
 ```
 
+## Testing
+
+```bash
+bin/setup
+
+CLICKHOUSE_PORT=8123 CLICKHOUSE_DATABASE=default bundle exec rspec spec/single
+```
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at [https://github.com/pnixx/clickhouse-activerecord](https://github.com/pnixx/clickhouse-activerecord). This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.

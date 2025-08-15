@@ -384,8 +384,8 @@ module ActiveRecord
         end
       end
 
-      def create_function(name, body)
-        fd = "CREATE FUNCTION #{quote_table_name(name)}#{cluster_sql_suffix} AS #{body}"
+      def create_function(name, body, **options)
+        fd = "CREATE#{' OR REPLACE' if options[:force]} FUNCTION #{quote_table_name(name)}#{cluster_sql_suffix} AS #{body}"
         do_execute(fd, format: nil)
       end
 
