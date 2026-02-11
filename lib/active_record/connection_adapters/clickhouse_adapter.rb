@@ -4,6 +4,7 @@ require 'arel/visitors/clickhouse'
 require 'arel/nodes/final'
 require 'arel/nodes/settings'
 require 'arel/nodes/using'
+require 'arel/nodes/limit_by'
 require 'active_record/connection_adapters/clickhouse/oid/array'
 require 'active_record/connection_adapters/clickhouse/oid/date'
 require 'active_record/connection_adapters/clickhouse/oid/date_time'
@@ -51,7 +52,7 @@ module ActiveRecord
 
   module ModelSchema
     module ClassMethods
-      delegate :final, :final!, :settings, :settings!, to: :all
+      delegate :final, :final!, :settings, :settings!, :limit_by, :limit_by!, to: :all
 
       def is_view
         @is_view || false

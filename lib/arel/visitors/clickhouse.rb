@@ -56,6 +56,7 @@ module Arel
       end
 
       def visit_Arel_Nodes_SelectOptions(o, collector)
+        maybe_visit o.limit_by, collector
         maybe_visit o.settings, super
       end
 
@@ -69,6 +70,11 @@ module Arel
         collect_nodes_for o.wheres, collector, ' WHERE ', ' AND '
         collect_nodes_for o.orders, collector, ' ORDER BY '
         maybe_visit o.limit, collector
+      end
+
+      def visit_Arel_Nodes_LimitBy(o, collector)
+        collector << "LIMIT #{o.expr} BY #{o.column}"
+        collector
       end
 
       def visit_Arel_Nodes_DeleteStatement(o, collector)

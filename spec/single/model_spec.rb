@@ -292,6 +292,18 @@ RSpec.describe 'Model', :migrations do
       quietly { ActiveRecord::MigrationContext.new(migrations_dir).up }
     end
 
+    describe '#limit_by' do
+      it 'works' do
+        sql = Model.limit_by(1, :event_name).to_sql
+        expect(sql).to eq('SELECT sample.* FROM sample LIMIT 1 BY event_name')
+      end
+
+      it 'works with limit' do
+        sql = Model.limit(1).limit_by(1, :event_name).to_sql
+        expect(sql).to eq('SELECT sample.* FROM sample LIMIT 1 BY event_name LIMIT 1')
+      end
+    end
+
     describe '#create' do
       it 'creates a new record' do
         expect {
