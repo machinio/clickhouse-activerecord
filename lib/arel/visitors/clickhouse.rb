@@ -45,6 +45,11 @@ module Arel
         end
       end
 
+      def visit_Arel_Nodes_GroupingSets(o, collector)
+        collector << 'GROUPING SETS '
+        grouping_array_or_grouping_element(o.expr, collector)
+      end
+
       # https://clickhouse.com/docs/en/sql-reference/statements/delete
       # DELETE and UPDATE in ClickHouse working only without table name
       def visit_Arel_Attributes_Attribute(o, collector)
@@ -130,6 +135,24 @@ module Arel
         @connection.sanitize_as_setting_name(value)
       end
 
+      private
+
+      # Utilized by GroupingSet, Cube & RollUp visitors to
+      # handle grouping aggregation semantics
+      def grouping_array_or_grouping_element(o, collector)
+        if o.is_a? Array
+          collector << '( '
+          o.each_with_index do |el, i|
+            collector << ', ' if i > 0
+            grouping_array_or_grouping_element el, collector
+          end
+          collector << ' )'
+        elsif o.respond_to? :expr
+          visit o.expr, collector
+        else
+          visit o, collector
+        end
+      end
     end
   end
 end

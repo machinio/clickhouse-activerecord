@@ -2,6 +2,7 @@
 
 require 'arel/visitors/clickhouse'
 require 'arel/nodes/final'
+require 'arel/nodes/grouping_sets'
 require 'arel/nodes/settings'
 require 'arel/nodes/using'
 require 'arel/nodes/limit_by'
@@ -52,7 +53,11 @@ module ActiveRecord
 
   module ModelSchema
     module ClassMethods
-      delegate :final, :final!, :settings, :settings!, :limit_by, :limit_by!, to: :all
+      delegate :final, :final!,
+               :group_by_grouping_sets, :group_by_grouping_sets!,
+               :settings, :settings!,
+               :limit_by, :limit_by!,
+               to: :all
 
       def is_view
         @is_view || false
