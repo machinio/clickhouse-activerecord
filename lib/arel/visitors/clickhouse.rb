@@ -77,6 +77,14 @@ module Arel
         maybe_visit o.limit, collector
       end
 
+      def visit_Arel_Nodes_Rows(o, collector)
+        if o.expr.is_a?(String)
+          collector << "ROWS #{o.expr}"
+        else
+          super
+        end
+      end
+
       def visit_Arel_Nodes_LimitBy(o, collector)
         collector << "LIMIT #{o.expr} BY #{o.column}"
         collector

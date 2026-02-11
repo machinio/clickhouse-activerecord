@@ -297,6 +297,18 @@ RSpec.describe 'Model', :migrations do
       end
     end
 
+    describe '#window' do
+      it 'works' do
+        sql = Model.window('x', order: 'date', partition: 'name', rows: 'UNBOUNDED PRECEDING').select('sum(event_value) OVER x').to_sql
+        expect(sql).to eq('SELECT sum(event_value) OVER x FROM sample WINDOW x AS (PARTITION BY name ORDER BY date ROWS UNBOUNDED PRECEDING)')
+      end
+
+      it 'empty' do
+        sql = Model.window('x').select('sum(event_value) OVER x').to_sql
+        expect(sql).to eq('SELECT sum(event_value) OVER x FROM sample WINDOW x AS ()')
+      end
+    end
+
     describe 'final request' do
       let!(:record1) { Model.create!(date: date, event_name: '1') }
       let!(:record2) { Model.create!(date: date, event_name: '1') }

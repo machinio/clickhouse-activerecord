@@ -65,6 +65,23 @@ module CoreExtensions
         self
       end
 
+      # Windows functions let you perform calculations across a set of rows that are related to the current row. For example:
+      #
+      #   users = User.window('x', order: 'date', partition: 'name', rows: 'UNBOUNDED PRECEDING').select('sum(value) OVER x')
+      #   # SELECT sum(value) OVER x FROM users WINDOW x AS (PARTITION BY name ORDER BY date ROWS UNBOUNDED PRECEDING)
+      #
+      # @param [String] name
+      # @param [Hash] opts
+      def window(name, **opts)
+        spawn.window!(name, **opts)
+      end
+
+      def window!(name, **opts)
+        @values[:windows] = [] unless @values[:windows]
+        @values[:windows] << [name, opts]
+        self
+      end
+
       # When FINAL is specified, ClickHouse fully merges the data before returning the result and thus performs all data transformations that happen during merges for the given table engine.
       # For example:
       #
@@ -152,6 +169,7 @@ module CoreExtensions
         arel.limit_by(*@values[:limit_by]) if @values[:limit_by].present?
         arel.settings(settings_values) unless settings_values.empty?
         arel.using(@values[:using]) if @values[:using].present?
+        arel.windows(@values[:windows]) if @values[:windows].present?
 
         arel
       end

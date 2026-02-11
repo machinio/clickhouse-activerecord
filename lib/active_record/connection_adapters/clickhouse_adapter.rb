@@ -55,6 +55,7 @@ module ActiveRecord
     module ClassMethods
       delegate :final, :final!,
                :group_by_grouping_sets, :group_by_grouping_sets!,
+               :window, :window!,
                :settings, :settings!,
                :limit_by, :limit_by!,
                to: :all
