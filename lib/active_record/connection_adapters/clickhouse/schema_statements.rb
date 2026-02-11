@@ -337,12 +337,18 @@ module ActiveRecord
         end
 
         def new_column_from_field(table_name, field, _definitions)
-          sql_type = field[1]
+          column_name, sql_type, default_type, default_expression = field
           type_metadata = fetch_type_metadata(sql_type)
-          default_value = extract_value_from_default(field[3], field[2])
-          default_function = extract_default_function(field[3])
-          default_value = lookup_cast_type(sql_type).cast(default_value)
-          ClickhouseColumn.new(field[0], default_value, type_metadata, field[1].include?('Nullable'), default_function)
+          default_value = extract_value_from_default(default_expression, default_type)
+          default_function = extract_default_function(default_expression)
+          cast_type = lookup_cast_type(sql_type)
+          default_value = cast_type.cast(default_value)
+
+          args = [column_name]
+          args << cast_type if ::ActiveRecord::version >= Gem::Version.new('8.1')
+          args += [default_value, type_metadata, field[1].include?('Nullable'), default_function]
+
+          Clickhouse::Column.new(*args, codec: field[5].presence)
         end
 
         def handle_warnings(sql)
