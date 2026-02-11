@@ -58,12 +58,12 @@
       <server>
         <id>1</id>
         <hostname>clickhouse1</hostname>
-        <port>9000</port>
+        <port>9234</port>
       </server>
       <server>
         <id>2</id>
         <hostname>clickhouse2</hostname>
-        <port>9000</port>
+        <port>9234</port>
       </server>
     </raft_configuration>
   </keeper_server>
