@@ -13,8 +13,8 @@ FIXTURES_PATH = File.join(File.dirname(__FILE__), 'fixtures')
 
 # Wait for ClickHouse to be ready before running tests.
 # This avoids flaky failures when the Docker container is still starting up.
-def wait_for_clickhouse!(host:, port:, timeout: 60)
-  uri = URI("http://#{host}:#{port}/ping")
+def wait_for_clickhouse!(host:, port:, username: nil, password: nil, timeout: 60)
+  uri = URI("http://#{username}:#{password}@#{host}:#{port}/ping")
   deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
   waited = 0
 
@@ -46,19 +46,23 @@ end
 
 ch_host = 'localhost'
 ch_port = (ENV['CLICKHOUSE_PORT'] || 8123).to_i
-wait_for_clickhouse!(host: ch_host, port: ch_port)
+ch_username = ENV['CLICKHOUSE_USER']
+ch_password = ENV['CLICKHOUSE_PASSWORD']
+db = ENV['CLICKHOUSE_DATABASE'] || 'test'
+cluster = ENV['CLICKHOUSE_CLUSTER']
+wait_for_clickhouse!(host: ch_host, port: ch_port, username: ch_username, password: ch_password)
 
 # Print ClickHouse server info for CI debugging
 begin
-  version = Net::HTTP.get(URI("http://#{ch_host}:#{ch_port}/?query=SELECT+version()")).strip
-  uptime = Net::HTTP.get(URI("http://#{ch_host}:#{ch_port}/?query=SELECT+uptime()")).strip
-  db = ENV['CLICKHOUSE_DATABASE'] || 'test'
-  cluster = ENV['CLICKHOUSE_CLUSTER']
+  version = Net::HTTP.get(URI("http://#{ch_username}:#{ch_password}@#{ch_host}:#{ch_port}/?query=SELECT+version()")).strip
+  uptime = Net::HTTP.get(URI("http://#{ch_username}:#{ch_password}@#{ch_host}:#{ch_port}/?query=SELECT+uptime()")).strip
 
   puts "─── ClickHouse ready ───"
   puts "  Version:  #{version}"
   puts "  Uptime:   #{uptime}s"
   puts "  Host:     #{ch_host}:#{ch_port}"
+  puts "  Username: #{ch_username}"
+  puts "  Password: #{ch_password}"
   puts "  Database: #{db}"
   puts "  Cluster:  #{cluster || '(none)'}"
   puts "  Rails:    #{ActiveRecord::VERSION::STRING}"
@@ -97,11 +101,11 @@ ActiveRecord::Base.configurations = HashWithIndifferentAccess.new(
     adapter: 'clickhouse',
     host: ch_host,
     port: ch_port,
-    database: ENV['CLICKHOUSE_DATABASE'] || 'test',
-    username: ENV['CLICKHOUSE_USER'],
-    password: ENV['CLICKHOUSE_PASSWORD'],
+    database: db,
+    username: ch_username,
+    password: ch_password,
     debug: false,
-    cluster_name: ENV['CLICKHOUSE_CLUSTER'],
+    cluster_name: cluster,
   }
 )
 
