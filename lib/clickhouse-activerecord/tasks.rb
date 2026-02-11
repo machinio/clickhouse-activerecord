@@ -15,8 +15,10 @@ module ClickhouseActiverecord
     def create
       establish_master_connection
       connection.create_database @configuration.database
-      connection.schema_migration.create_table
-      connection.internal_metadata.create_table
+      if ActiveRecord::version >= Gem::Version.new('7.2')
+        connection.schema_migration.create_table
+        connection.internal_metadata.create_table
+      end
     rescue ActiveRecord::StatementInvalid => e
       if e.cause.to_s.include?('already exists')
         raise ActiveRecord::DatabaseAlreadyExists
