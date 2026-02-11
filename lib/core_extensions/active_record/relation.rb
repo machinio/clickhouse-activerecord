@@ -1,14 +1,9 @@
 module CoreExtensions
   module ActiveRecord
     module Relation
-      def reverse_order!
-        return super unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
 
-        orders = order_values.uniq.reject(&:blank?)
-        return super unless orders.empty? && !primary_key
-
-        self.order_values = (column_names & %w[date created_at]).map { |c| arel_table[c].desc }
-        self
+      def self.prepended(base)
+        base::VALID_UNSCOPING_VALUES << :final << :settings
       end
 
       # Define settings in the SETTINGS clause of the SELECT query. The setting value is applied only to that query and is reset to the default or previous value after the query is executed.
@@ -25,9 +20,22 @@ module CoreExtensions
 
       # @param [Hash] opts
       def settings!(**opts)
-        check_command('SETTINGS')
-        @values[:settings] = (@values[:settings] || {}).merge opts
+        check_command!('SETTINGS')
+        self.settings_values = settings_values.merge opts
         self
+      end
+
+      def settings_values
+        @values.fetch(:settings, ::ActiveRecord::QueryMethods::FROZEN_EMPTY_HASH)
+      end
+
+      def settings_values=(value)
+        if ::ActiveRecord::version >= Gem::Version.new('7.2')
+          assert_modifiable!
+        else
+          assert_mutability!
+        end
+        @values[:settings] = value
       end
 
       # When FINAL is specified, ClickHouse fully merges the data before returning the result and thus performs all data transformations that happen during merges for the given table engine.
@@ -37,14 +45,30 @@ module CoreExtensions
       #   # SELECT users.* FROM users FINAL
       #
       # An <tt>ActiveRecord::ActiveRecordError</tt> will be raised if database not ClickHouse.
-      def final
-        spawn.final!
+      #
+      # @param [Boolean] final
+      def final(final = true)
+        spawn.final!(final)
       end
 
-      def final!
-        check_command('FINAL')
-        @values[:final] = true
+      # @param [Boolean] final
+      def final!(final = true)
+        check_command!('FINAL')
+        self.final_value = final
         self
+      end
+
+      def final_value=(value)
+        if ::ActiveRecord::version >= Gem::Version.new('7.2')
+          assert_modifiable!
+        else
+          assert_mutability!
+        end
+        @values[:final] = value
+      end
+
+      def final_value
+        @values.fetch(:final, nil)
       end
 
       # The USING clause specifies one or more columns to join, which establishes the equality of these columns. For example:
@@ -66,7 +90,7 @@ module CoreExtensions
 
       private
 
-      def check_command(cmd)
+      def check_command!(cmd)
         raise ::ActiveRecord::ActiveRecordError, cmd + ' is a ClickHouse specific query clause' unless connection.is_a?(::ActiveRecord::ConnectionAdapters::ClickhouseAdapter)
       end
 
@@ -77,8 +101,8 @@ module CoreExtensions
           arel = super(connection_or_aliases)
         end
 
-        arel.final! if @values[:final].present?
-        arel.settings(@values[:settings]) if @values[:settings].present?
+        arel.final! if final_value
+        arel.settings(settings_values) unless settings_values.empty?
         arel.using(@values[:using]) if @values[:using].present?
 
         arel

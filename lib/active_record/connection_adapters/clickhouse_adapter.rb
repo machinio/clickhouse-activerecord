@@ -149,7 +149,9 @@ module ActiveRecord
         uint256: { name: 'UInt256' },
 
         map: { name: 'Map' },
-        point: { name: 'Point' }
+        point: { name: 'Point' },
+
+        json: { name: 'JSON' },
       }.freeze
 
       include Clickhouse::Quoting
@@ -184,6 +186,11 @@ module ActiveRecord
         @prepared_statements = false
 
         connect
+      end
+
+      def disconnect!
+        @connection.finish if @connection&.started?
+        super
       end
 
       def migrations_paths
@@ -277,6 +284,8 @@ module ActiveRecord
           m.register_type(%r(Map)) do |sql_type|
             Clickhouse::OID::Map.new(sql_type)
           end
+
+          m.register_type %r(JSON)i, ActiveRecord::Type::Json.new
         end
       end
 

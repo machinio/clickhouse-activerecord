@@ -9,6 +9,10 @@ module CoreExtensions
           @settings = nil
         end
 
+        def hash
+          [@cores, @orders, @limit, @lock, @offset, @with, @settings].hash
+        end
+
         def eql?(other)
           super && settings == other.settings
         end

@@ -34,6 +34,54 @@ module ActiveRecord
           do_execute(sql, name, settings: settings)
         end
 
+        def execute_batch(statements, name = nil, **kwargs)
+          statements.each do |statement|
+            execute(statement, name, **kwargs)
+          end
+        end
+
+        # Execute a SQL query and stream the response body to a temporary file.
+        # Returns the path to the temp file.
+        # @param [String] sql
+        # @param [String] name
+        # @param [String] format
+        # @param [Hash] settings
+        # @return [String] path to the temp file
+        def execute_to_file(sql, name = nil, format: DEFAULT_RESPONSE_FORMAT, settings: {})
+          formatted_sql = apply_format(sql, format)
+          request_params = @connection_config || {}
+
+          log(formatted_sql, [adapter_name, 'Stream', name].compact.join(' ')) do
+            @lock.synchronize do
+              req = Net::HTTP::Post.new("/?#{request_params.merge(settings).to_param}", {
+                'Content-Type' => 'application/x-www-form-urlencoded',
+                'User-Agent' => "Clickhouse ActiveRecord #{ClickhouseActiverecord::VERSION}",
+              })
+
+              file = Tempfile.new('clickhouse-activerecord', binmode: true)
+              @connection.request(req, formatted_sql) do |response|
+                if response.code.to_i == 200
+                  response.read_body do |chunk|
+                    file.write(chunk)
+                  end
+                  file.close
+                  return file.path
+                else
+                  body = response.body
+                  case body
+                  when /DB::Exception:.*\(UNKNOWN_DATABASE\)/
+                    raise ActiveRecord::NoDatabaseError
+                  when /DB::Exception:.*\(DATABASE_ALREADY_EXISTS\)/
+                    raise ActiveRecord::DatabaseAlreadyExists
+                  else
+                    raise ActiveRecord::ActiveRecordError, "Response code: #{response.code}:\n#{body}"
+                  end
+                end
+              end
+            end
+          end
+        end
+
         def exec_insert(sql, name, _binds, _pk = nil, _sequence_name = nil, returning: nil)
           new_sql = sql.dup.sub(/ (DEFAULT )?VALUES/, " VALUES")
           do_execute(new_sql, name, format: nil)
@@ -184,6 +232,38 @@ module ActiveRecord
           else
             super
           end
+        end
+
+        # Returns a hash of table names to their engine types
+        def table_engines(table_names = nil)
+          table_names_sql = if table_names.present?
+            "AND name IN (#{table_names.map { |name| "'#{name}'" }.join(', ')})"
+          end
+
+          sql = <<~SQL
+            SELECT name, engine FROM system.tables
+            WHERE database = currentDatabase()
+            #{table_names_sql}
+          SQL
+
+          result = do_system_execute(sql)
+          return {} if result.nil?
+
+          result['data'].to_h { |row| [row[0], row[1]] }
+        end
+
+        # @see https://clickhouse.com/docs/sql-reference/statements/truncate
+        # Additionally add 'Dictionary' because it is returned from 'show tables'.
+        TRUNCATE_UNSUPPORTED_ENGINES = %w[View File URL Buffer Null Dictionary].freeze
+
+        def build_truncate_statements(table_names)
+          engines = table_engines(table_names)
+          tables_to_truncate = table_names.select do |table_name|
+            engine = engines[table_name]
+            engine.nil? || !TRUNCATE_UNSUPPORTED_ENGINES.include?(engine)
+          end
+
+          super(tables_to_truncate)
         end
 
         def create_savepoint(name = current_savepoint_name)
