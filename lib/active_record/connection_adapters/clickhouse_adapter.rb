@@ -13,6 +13,7 @@ require 'active_record/connection_adapters/clickhouse/oid/map'
 require 'active_record/connection_adapters/clickhouse/oid/uuid'
 require 'active_record/connection_adapters/clickhouse/oid/enum'
 require 'active_record/connection_adapters/clickhouse/oid/point'
+require 'active_record/connection_adapters/clickhouse/column'
 require 'active_record/connection_adapters/clickhouse/quoting'
 require 'active_record/connection_adapters/clickhouse/schema_definitions'
 require 'active_record/connection_adapters/clickhouse/schema_creation'
@@ -74,6 +75,13 @@ module ActiveRecord
     end
 
     class ClickhouseColumn < Column
+      attr_reader :codec
+
+      def initialize(*, codec: nil, **)
+        super
+        @codec = codec
+      end
+
       def key_type
         return nil unless type == :map
 
