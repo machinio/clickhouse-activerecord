@@ -111,7 +111,7 @@ module ActiveRecord
         private
 
         def valid_column_definition_options
-          super + [:array, :low_cardinality, :fixed_string, :value, :type, :map]
+          super + [:array, :low_cardinality, :fixed_string, :value, :type, :map, :codec]
         end
       end
 

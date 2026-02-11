@@ -17,7 +17,7 @@ require 'active_record/connection_adapters/clickhouse/oid/enum'
 require 'active_record/connection_adapters/clickhouse/oid/point'
 require 'active_record/connection_adapters/clickhouse/column'
 require 'active_record/connection_adapters/clickhouse/quoting'
-require 'active_record/connection_adapters/clickhouse/schema_definitions'
+require 'active_record/connection_adapters/clickhouse/table_definition'
 require 'active_record/connection_adapters/clickhouse/schema_creation'
 require 'active_record/connection_adapters/clickhouse/schema_statements'
 require 'net/http'
@@ -79,54 +79,6 @@ module ActiveRecord
 
     if ActiveRecord::version >= Gem::Version.new('7.2')
       register "clickhouse", "ActiveRecord::ConnectionAdapters::ClickhouseAdapter", "active_record/connection_adapters/clickhouse_adapter"
-    end
-
-    class ClickhouseColumn < Column
-      attr_reader :codec
-
-      def initialize(*, codec: nil, **)
-        super
-        @codec = codec
-      end
-
-      def key_type
-        return nil unless type == :map
-
-        cast_type(map_types.first)
-      end
-
-      def value_type
-        return nil unless type == :map
-
-        cast_type(map_types.last)
-      end
-
-      private
-
-      def map_types
-        sql_type_metadata.sql_type.match(/Map\((.+)\,\s?(.+)\)/).captures
-      end
-
-      def cast_type(type)
-        return type if type.nil?
-
-        case type
-        when /U?Int\d+/
-          :integer
-        when /DateTime/
-          :datetime
-        when /Date/
-          :date
-        when /Array/
-          type
-        else
-          :string
-        end
-      end
-
-      def deduplicated
-        self
-      end
     end
 
     class ClickhouseAdapter < AbstractAdapter
