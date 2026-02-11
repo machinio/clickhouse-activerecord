@@ -5,10 +5,68 @@ require 'pry'
 require 'active_record'
 require 'clickhouse-activerecord'
 require 'active_support/testing/stream'
+require 'net/http'
 
 ClickhouseActiverecord.load
 
 FIXTURES_PATH = File.join(File.dirname(__FILE__), 'fixtures')
+
+# Wait for ClickHouse to be ready before running tests.
+# This avoids flaky failures when the Docker container is still starting up.
+def wait_for_clickhouse!(host:, port:, timeout: 60)
+  uri = URI("http://#{host}:#{port}/ping")
+  deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+  waited = 0
+
+  $stdout.write "Waiting for ClickHouse at #{host}:#{port} "
+  $stdout.flush
+
+  loop do
+    begin
+      response = Net::HTTP.get_response(uri)
+      if response.is_a?(Net::HTTPSuccess)
+        puts " ready (#{waited}s)"
+        return
+      end
+    rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Net::OpenTimeout, Net::ReadTimeout
+      # ClickHouse not ready yet
+    end
+
+    if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      puts " FAILED"
+      abort "ClickHouse did not become ready at #{host}:#{port} within #{timeout}s"
+    end
+
+    $stdout.write "."
+    $stdout.flush
+    sleep 1
+    waited += 1
+  end
+end
+
+ch_host = 'localhost'
+ch_port = (ENV['CLICKHOUSE_PORT'] || 8123).to_i
+wait_for_clickhouse!(host: ch_host, port: ch_port)
+
+# Print ClickHouse server info for CI debugging
+begin
+  version = Net::HTTP.get(URI("http://#{ch_host}:#{ch_port}/?query=SELECT+version()")).strip
+  uptime = Net::HTTP.get(URI("http://#{ch_host}:#{ch_port}/?query=SELECT+uptime()")).strip
+  db = ENV['CLICKHOUSE_DATABASE'] || 'test'
+  cluster = ENV['CLICKHOUSE_CLUSTER']
+
+  puts "─── ClickHouse ready ───"
+  puts "  Version:  #{version}"
+  puts "  Uptime:   #{uptime}s"
+  puts "  Host:     #{ch_host}:#{ch_port}"
+  puts "  Database: #{db}"
+  puts "  Cluster:  #{cluster || '(none)'}"
+  puts "  Rails:    #{ActiveRecord::VERSION::STRING}"
+  puts "  Ruby:     #{RUBY_VERSION}"
+  puts "────────────────────────"
+rescue => e
+  puts "Warning: could not fetch ClickHouse info: #{e.message}"
+end
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -37,8 +95,8 @@ end
 ActiveRecord::Base.configurations = HashWithIndifferentAccess.new(
   default: {
     adapter: 'clickhouse',
-    host: 'localhost',
-    port: ENV['CLICKHOUSE_PORT'] || 8123,
+    host: ch_host,
+    port: ch_port,
     database: ENV['CLICKHOUSE_DATABASE'] || 'test',
     username: nil,
     password: nil,
