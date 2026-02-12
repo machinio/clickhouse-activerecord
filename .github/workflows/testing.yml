@@ -28,7 +28,7 @@ jobs:
             rails: 7.2.3
           - ruby: 3.2
             rails: 8.1.2
-        clickhouse: ['25.8']
+        clickhouse: ['25.8', '26.1']
 
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
             rails: 7.2.3
           - ruby: 3.2
             rails: 8.1.2
-        clickhouse: ['24.9', '25.8']
+        clickhouse: ['25.8', '26.1']
 
     steps:
       - uses: actions/checkout@v4
