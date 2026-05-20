@@ -356,6 +356,27 @@ RSpec.describe 'Migration', :migrations do
       end
     end
 
+    describe 'add materialized column' do
+      let(:directory) { 'dsl_add_materialized_column' }
+      it 'adds a MATERIALIZED column and supports MATERIALIZE COLUMN backfill' do
+        quietly { migration_context.up(1) }
+
+        ActiveRecord::Base.connection.insert("INSERT INTO some (date, value) VALUES ('2024-01-01', 5)")
+
+        quietly { migration_context.up(2) }
+
+        expect(ActiveRecord::Base.connection.show_create_table('some')).to include('`value_doubled` UInt64 MATERIALIZED value * 2')
+
+        expect { ActiveRecord::Base.connection.materialize_column('some', 'missing_column') }
+          .to raise_error(ActiveRecord::ActiveRecordError, include('no column missing_column'))
+
+        ActiveRecord::Base.connection.materialize_column('some', 'value_doubled')
+
+        rows = ActiveRecord::Base.connection.execute('SELECT value, value_doubled FROM some')['data']
+        expect(rows).to contain_exactly([5, 10])
+      end
+    end
+
     describe 'drop column' do
       let(:directory) { 'dsl_drop_column' }
       it 'drops column' do

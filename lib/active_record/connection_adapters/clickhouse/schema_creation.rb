@@ -44,6 +44,9 @@ module ActiveRecord
           if options[:codec]
             sql.gsub!(/\s+(.*)/, " \\1 CODEC(#{options[:codec]})")
           end
+          if options[:materialized]
+            sql.gsub!(/\s+(.*)/, " \\1 MATERIALIZED #{options[:materialized]}")
+          end
           sql.gsub!(/(\sString)\(\d+\)/, '\1')
 
           if ::ActiveRecord::version >= Gem::Version.new('8.1')

@@ -500,6 +500,16 @@ module ActiveRecord
         execute query.join(' ')
       end
 
+      # Materializes a MATERIALIZED/DEFAULT column for existing parts
+      # @link https://clickhouse.com/docs/sql-reference/statements/alter/column#materialize-column
+      def materialize_column(table_name, column_name, partition: nil)
+        query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"]
+        query << 'MATERIALIZE COLUMN'
+        query << quote_column_name(column_name)
+        query << "IN PARTITION #{quote_column_name(partition)}" if partition
+        execute query.join(' ')
+      end
+
       # Deletes the secondary index files from disk without removing description
       def clear_index(table_name, name, if_exists: false, partition: nil)
         query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"]
