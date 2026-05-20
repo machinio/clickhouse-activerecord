@@ -5,7 +5,7 @@ module ActiveRecord
     module Clickhouse
       class TableDefinition < ActiveRecord::ConnectionAdapters::TableDefinition
 
-        attr_reader :view, :materialized, :if_not_exists, :to
+        attr_reader :view, :materialized, :if_not_exists, :to, :comment
 
         def initialize(
             conn,

@@ -512,6 +512,46 @@ module ActiveRecord
         execute query.join(' ')
       end
 
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] MODIFY SETTING name1=value1, ...
+      def modify_table_setting(table_name, settings)
+        assignments = settings.map { |k, v| "#{k} = #{quote(v)}" }.join(', ')
+        execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} MODIFY SETTING #{assignments}"
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] RESET SETTING name1, ...
+      def reset_table_setting(table_name, *names)
+        execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} RESET SETTING #{names.join(', ')}"
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] DELETE WHERE <expr>
+      # @link https://clickhouse.com/docs/sql-reference/statements/alter/delete
+      def alter_delete(table_name, where)
+        execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} DELETE WHERE #{where}"
+      end
+
+      # ALTER TABLE [db.]view [ON CLUSTER cluster] MODIFY QUERY <select>
+      # Works for materialized views created via `create_view materialized: true, to: ...`.
+      # @link https://clickhouse.com/docs/sql-reference/statements/alter/view
+      def modify_view_query(view_name, query)
+        execute "ALTER TABLE #{quote_table_name(view_name)}#{cluster_sql_suffix} MODIFY QUERY #{query}"
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] MODIFY COMMENT 'comment'
+      # @link https://clickhouse.com/docs/sql-reference/statements/alter/comment
+      def change_table_comment(table_name, comment)
+        execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} MODIFY COMMENT #{quote(comment.to_s)}"
+      end
+
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] COMMENT COLUMN [IF EXISTS] name 'comment'
+      # @link https://clickhouse.com/docs/sql-reference/statements/alter/column#comment-column
+      def change_column_comment(table_name, column_name, comment, if_exists: false)
+        query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} COMMENT COLUMN"]
+        query << 'IF EXISTS' if if_exists
+        query << quote_column_name(column_name)
+        query << quote(comment.to_s)
+        execute query.join(' ')
+      end
+
       # Deletes the secondary index files from disk without removing description
       def clear_index(table_name, name, if_exists: false, partition: nil)
         query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"]

@@ -356,6 +356,29 @@ RSpec.describe 'Migration', :migrations do
       end
     end
 
+    describe 'table and column comments' do
+      let(:directory) { 'dsl_table_and_column_comments' }
+      it 'creates with comments and supports change_*_comment' do
+        subject
+
+        create_sql = ActiveRecord::Base.connection.show_create_table('some')
+        expect(create_sql).to include("`date` Date COMMENT 'Event date'")
+        expect(create_sql).to include("COMMENT 'Stores some rows'")
+
+        ActiveRecord::Base.connection.change_table_comment('some', 'New table comment')
+        ActiveRecord::Base.connection.change_column_comment('some', 'value', 'Numeric value')
+
+        updated_sql = ActiveRecord::Base.connection.show_create_table('some')
+        expect(updated_sql).to include("COMMENT 'New table comment'")
+        expect(updated_sql).to include("`value` UInt32 COMMENT 'Numeric value'")
+
+        expect { ActiveRecord::Base.connection.change_column_comment('some', 'missing', 'x') }
+          .to raise_error(ActiveRecord::ActiveRecordError, include('Cannot find column `missing`'))
+
+        ActiveRecord::Base.connection.change_column_comment('some', 'missing', 'x', if_exists: true)
+      end
+    end
+
     describe 'add materialized column' do
       let(:directory) { 'dsl_add_materialized_column' }
       it 'adds a MATERIALIZED column and supports MATERIALIZE COLUMN backfill' do

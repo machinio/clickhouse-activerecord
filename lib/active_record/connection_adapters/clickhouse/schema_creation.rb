@@ -49,6 +49,8 @@ module ActiveRecord
           end
           sql.gsub!(/(\sString)\(\d+\)/, '\1')
 
+          sql << " COMMENT #{@conn.quote(options[:comment])}" if options[:comment].present?
+
           if ::ActiveRecord::version >= Gem::Version.new('8.1')
             sql << " DEFAULT #{quote_default_expression_for_column_definition(options[:default], options[:column])}" if options_include_default?(options)
           else
@@ -127,6 +129,7 @@ module ActiveRecord
           # Attach options for only table or materialized view without TO section
           add_table_options!(create_sql, o) if !o.view || o.view && o.materialized && !o.to
           add_as_clause!(create_sql, o) if o.as && o.view
+          create_sql << " COMMENT #{@conn.quote(o.comment)}" if o.comment.present?
           create_sql
         end
 
