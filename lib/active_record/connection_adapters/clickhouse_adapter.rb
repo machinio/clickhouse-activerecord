@@ -485,9 +485,11 @@ module ActiveRecord
       end
 
       # Removes index description from tables metadata and deletes index files from disk
-      def remove_index(table_name, name)
-        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix}"
-        execute "#{query} DROP INDEX #{quote_column_name(name)}"
+      def remove_index(table_name, name, if_exists: false)
+        query = ["ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} DROP INDEX"]
+        query << 'IF EXISTS' if if_exists
+        query << quote_column_name(name)
+        execute query.join(' ')
       end
 
       # Rebuilds the secondary index name for the specified partition_name
