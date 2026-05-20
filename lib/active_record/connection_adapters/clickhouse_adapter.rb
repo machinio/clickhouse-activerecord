@@ -523,10 +523,12 @@ module ActiveRecord
         execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} RESET SETTING #{names.join(', ')}"
       end
 
-      # ALTER TABLE [db.]table [ON CLUSTER cluster] DELETE WHERE <expr>
+      # ALTER TABLE [db.]table [ON CLUSTER cluster] DELETE WHERE <expr> [SETTINGS ...]
       # @link https://clickhouse.com/docs/sql-reference/statements/alter/delete
-      def alter_delete(table_name, where)
-        execute "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} DELETE WHERE #{where}"
+      def alter_delete(table_name, where, settings: {})
+        query = "ALTER TABLE #{quote_table_name(table_name)}#{cluster_sql_suffix} DELETE WHERE #{where}"
+        query += " SETTINGS #{settings.map { |k, v| "#{k} = #{quote(v)}" }.join(', ')}" if settings.any?
+        execute query
       end
 
       # ALTER TABLE [db.]view [ON CLUSTER cluster] MODIFY QUERY <select>
